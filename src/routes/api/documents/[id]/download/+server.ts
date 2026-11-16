@@ -22,14 +22,25 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
 		throw error(404, 'Document not found in Vault');
 	}
 
+	const safeFileName = (doc.fileName || 'document.pdf').replace(/["\\\r\n/]/g, '_');
+	const resolvedContentType = doc.contentType || 'application/pdf';
+	const isInlineSafe =
+		resolvedContentType === 'application/pdf' ||
+		resolvedContentType === 'image/png' ||
+		resolvedContentType === 'image/jpeg' ||
+		resolvedContentType === 'image/webp';
+	const disposition = isInlineSafe ? 'inline' : 'attachment';
+
 	// 1. If stored in Cloudflare R2, stream the R2 object
 	if (platform.env.BUCKET && doc.r2Key) {
 		try {
 			const object = await platform.env.BUCKET.get(doc.r2Key);
 			if (object) {
 				const headers = new Headers();
-				headers.set('Content-Type', doc.contentType || 'application/pdf');
-				headers.set('Content-Disposition', `inline; filename="${doc.fileName}"`);
+				headers.set('Content-Type', resolvedContentType);
+				headers.set('Content-Disposition', `${disposition}; filename="${safeFileName}"`);
+				headers.set('X-Content-Type-Options', 'nosniff');
+				headers.set('Content-Security-Policy', "default-src 'none'; sandbox");
 				return new Response(object.body as ReadableStream, { headers });
 			}
 		} catch (err) {
@@ -76,7 +87,9 @@ startxref
 	return new Response(mockContent, {
 		headers: {
 			'Content-Type': 'application/pdf',
-			'Content-Disposition': `inline; filename="${doc.fileName}"`
+			'Content-Disposition': `inline; filename="${safeFileName}"`,
+			'X-Content-Type-Options': 'nosniff',
+			'Content-Security-Policy': "default-src 'none'; sandbox"
 		}
 	});
 };

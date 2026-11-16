@@ -57,10 +57,10 @@ export const actions: Actions = {
 			});
 		}
 
-		if (existingUser.status === 'disabled') {
+		if (existingUser.status !== 'active') {
 			return fail(403, {
 				identifier,
-				error: 'This account has been deactivated. Please contact the Secretary.'
+				error: 'This account is not active. Please contact the Secretary.'
 			});
 		}
 
@@ -89,9 +89,26 @@ export const actions: Actions = {
 
 		const isSecretary = userRoles.includes('secretary');
 		const defaultDestination = isSecretary ? '/dashboard' : '/operations?tab=calendar';
-		const destination = rawRedirect && (isSecretary || rawRedirect.startsWith('/operations') || rawRedirect.startsWith('/calendar') || rawRedirect.startsWith('/governance'))
-			? rawRedirect
-			: defaultDestination;
+		let isSafeRelative = false;
+		if (
+			rawRedirect.startsWith('/') &&
+			!rawRedirect.startsWith('//') &&
+			!/[\x00-\x1f\x7f\\]/.test(rawRedirect)
+		) {
+			try {
+				isSafeRelative = new URL(rawRedirect, url.origin).origin === url.origin;
+			} catch {
+				isSafeRelative = false;
+			}
+		}
+		const destination =
+			isSafeRelative &&
+			(isSecretary ||
+				rawRedirect.startsWith('/operations') ||
+				rawRedirect.startsWith('/calendar') ||
+				rawRedirect.startsWith('/governance'))
+				? rawRedirect
+				: defaultDestination;
 
 		throw redirect(303, destination);
 	}

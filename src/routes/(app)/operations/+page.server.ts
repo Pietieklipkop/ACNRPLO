@@ -315,14 +315,22 @@ export const actions: Actions = {
 		});
 		if (!quota) return fail(404, { error: 'Quota not found.' });
 
-		const allocation = await db.query.quotaAllocations.findFirst({
-			where: and(
-				eq(schema.quotaAllocations.quotaId, quotaId),
-				eq(schema.quotaAllocations.userId, locals.user.id)
+		const [updatedAlloc] = await db
+			.update(schema.quotaAllocations)
+			.set({
+				huntedHead: sql`${schema.quotaAllocations.huntedHead} + ${headCount}`,
+				updatedAt: new Date()
+			})
+			.where(
+				and(
+					eq(schema.quotaAllocations.quotaId, quotaId),
+					eq(schema.quotaAllocations.userId, locals.user.id),
+					sql`(${schema.quotaAllocations.allocatedHead} - ${schema.quotaAllocations.huntedHead}) >= ${headCount}`
+				)
 			)
-		});
+			.returning();
 
-		if (!allocation || allocation.allocatedHead - allocation.huntedHead < headCount) {
+		if (!updatedAlloc) {
 			return fail(400, { error: 'Head count exceeds your remaining quota balance.' });
 		}
 
@@ -338,14 +346,6 @@ export const actions: Actions = {
 			firearmCaliber,
 			notes
 		});
-
-		await db
-			.update(schema.quotaAllocations)
-			.set({
-				huntedHead: allocation.huntedHead + headCount,
-				updatedAt: new Date()
-			})
-			.where(eq(schema.quotaAllocations.id, allocation.id));
 
 		await logAuditEvent(platform.env.DB, {
 			userId: locals.user.id,

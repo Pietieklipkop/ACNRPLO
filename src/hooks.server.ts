@@ -1,8 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
-import { building } from '$app/environment';
+import { building, dev } from '$app/environment';
 import { redirect, error } from '@sveltejs/kit';
 import { createAuth } from '$lib/server/auth';
-import { ensureSeedData } from '$lib/server/db/seed';
 import { getDb, schema } from '$lib/server/db';
 import { eq, and } from 'drizzle-orm';
 import type { UserRole } from '$lib/server/auth/roles';
@@ -14,11 +13,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	const { DB } = event.platform.env;
-	const auth = createAuth(DB, event.url.origin);
+	const authSecret =
+		event.platform.env.BETTER_AUTH_SECRET ||
+		(dev ? 'dev-local-only-secret-change-in-production-32chars!' : undefined);
+	const auth = createAuth(DB, event.url.origin, authSecret);
 	event.locals.auth = auth;
-
-	// Ensure seed accounts for each role and reserve entities exist on boot
-	await ensureSeedData(auth, DB);
 
 	try {
 		const sessionData = await auth.api.getSession({

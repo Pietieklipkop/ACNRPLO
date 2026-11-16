@@ -94,7 +94,6 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 			email: inv.email,
 			name: inv.name,
 			relationship: inv.relationship,
-			token: inv.token,
 			status: inv.status,
 			expiresAt: inv.expiresAt,
 			createdAt: inv.createdAt
@@ -213,14 +212,23 @@ export const actions: Actions = {
 				return fail(400, { error: 'This person is already an active member linked to your profile.' });
 			}
 
-			// If the user is the secretary
+			if (existingUser.status === 'disabled' || existingUser.status === 'archived') {
+				return fail(400, { error: 'This account is inactive. Please contact the Secretary.' });
+			}
+
 			let existingRoles: string[] = [];
 			try {
 				existingRoles = JSON.parse(existingUser.roles || '[]');
 			} catch {}
 
-			if (existingRoles.includes('secretary')) {
-				return fail(400, { error: 'The Reserve Secretary cannot be added as an associate.' });
+			if (
+				existingRoles.includes('secretary') ||
+				existingRoles.includes('main_plo') ||
+				existingRoles.includes('executive')
+			) {
+				return fail(400, {
+					error: 'Existing Main PLO, Executive, or Secretary accounts cannot be invited as associates.'
+				});
 			}
 		}
 

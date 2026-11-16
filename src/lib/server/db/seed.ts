@@ -106,30 +106,6 @@ export async function ensureSeedData(auth: AppAuth, d1: D1Database) {
 	const db = getDb(d1);
 
 	try {
-		// Ensure invitations table exists in D1
-		try {
-			await d1.exec(`
-				CREATE TABLE IF NOT EXISTS invitations (
-					id text PRIMARY KEY NOT NULL,
-					email text NOT NULL,
-					name text,
-					relationship text DEFAULT 'family' NOT NULL,
-					sponsoring_main_plo_user_id text NOT NULL,
-					token text NOT NULL UNIQUE,
-					status text DEFAULT 'pending' NOT NULL,
-					expires_at integer NOT NULL,
-					accepted_at integer,
-					created_at integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
-					FOREIGN KEY (sponsoring_main_plo_user_id) REFERENCES user(id) ON UPDATE no action ON DELETE cascade
-				);
-				CREATE INDEX IF NOT EXISTS invitations_token_idx ON invitations (token);
-				CREATE INDEX IF NOT EXISTS invitations_email_idx ON invitations (email);
-				CREATE INDEX IF NOT EXISTS invitations_sponsor_idx ON invitations (sponsoring_main_plo_user_id);
-			`);
-		} catch (tableErr) {
-			console.warn('Could not auto-create invitations table (might already exist):', tableErr);
-		}
-
 		// Fast path: if the target configuration is already active in D1, avoid re-running heavy seeding
 		const hasGroengoud = await db.query.landPortions.findFirst({
 			where: eq(schema.landPortions.portionName, 'Groengoud')
@@ -141,38 +117,6 @@ export async function ensureSeedData(auth: AppAuth, d1: D1Database) {
 		if (hasGroengoud && targetWillem) {
 			isSeededInMemory = true;
 			return;
-		}
-
-		// 1. Initial bootstrap if Groengoud portion doesn't exist
-		if (!hasGroengoud) {
-			console.log('Synchronizing user accounts and land portions to the target testing configuration...');
-			// First delete dependent child tables to prevent foreign key constraint violations
-			await db.delete(schema.votes);
-			await db.delete(schema.votingPolls);
-			await db.delete(schema.quotaBuyRequests);
-			await db.delete(schema.quotaTrades);
-			await db.delete(schema.quotaAllocations);
-			await db.delete(schema.quotas);
-			await db.delete(schema.huntingLogs);
-			await db.delete(schema.calendarEntries);
-			await db.delete(schema.documents);
-			await db.delete(schema.gameCounts);
-			await db.delete(schema.financialRecords);
-			await db.delete(schema.invitations);
-			await db.delete(schema.associates);
-			await db.delete(schema.landPortions);
-			await db.delete(schema.auditLogs);
-			await db.delete(schema.session);
-			await db.delete(schema.account);
-
-			const targetEmails = SEED_USERS.map((u) => u.email.toLowerCase());
-			const allExistingUsers = await db.query.user.findMany();
-
-			for (const u of allExistingUsers) {
-				if (!targetEmails.includes(u.email.toLowerCase())) {
-					await db.delete(schema.user).where(eq(schema.user.id, u.id));
-				}
-			}
 		}
 
 		// 2. Seed / Synchronize the 3 Accounts
@@ -810,6 +754,7 @@ export async function ensureMasterData(d1: D1Database) {
 				await db.update(schema.user).set({ color: assigned }).where(eq(schema.user.id, u.id));
 			}
 		}
+		isMasterDataSeededInMemory = true;
 	} catch (err) {
 		console.error('Failed to seed master data:', err);
 	}

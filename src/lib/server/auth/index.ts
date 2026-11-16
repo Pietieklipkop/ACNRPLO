@@ -4,12 +4,17 @@ import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { getRequestEvent } from '$app/server';
 import { getDb, schema } from '$lib/server/db';
 
-export const createAuth = (d1: D1Database, appUrl?: string, secret?: string) =>
-	betterAuth({
+export const createAuth = (d1: D1Database, appUrl?: string, secret?: string) => {
+	if (!secret) {
+		throw new Error('BETTER_AUTH_SECRET is required');
+	}
+
+	return betterAuth({
 		baseURL: appUrl || 'http://localhost:5173',
-		secret: secret || 'acnrplo-reserve-enterprise-secret-key-32-chars-min!',
+		secret,
 		emailAndPassword: {
 			enabled: true,
+			disableSignUp: true,
 			requireEmailVerification: false
 		},
 		database: drizzleAdapter(getDb(d1), {
@@ -51,5 +56,6 @@ export const createAuth = (d1: D1Database, appUrl?: string, secret?: string) =>
 			sveltekitCookies(getRequestEvent)
 		]
 	});
+};
 
 export type AppAuth = ReturnType<typeof createAuth>;
