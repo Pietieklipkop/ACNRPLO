@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="reserveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2D4733" />
+      <stop offset="100%" stop-color="#19281D" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8A838" />
+      <stop offset="100%" stop-color="#C2841E" />
+    </linearGradient>
+  </defs>
+  <!-- Background Shield/Rounded Rect -->
+  <rect width="512" height="512" rx="112" fill="url(#reserveGrad)" />
+  
+  <!-- Outer Gold Border -->
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="none" stroke="url(#goldGrad)" stroke-width="12" opacity="0.85" />
+  
+  <!-- Stylized Acacia Tree & Reserve Shield Emblem -->
+  <g transform="translate(106, 80) scale(0.6)">
+    <!-- Tree Trunk -->
+    <path d="M250 420 L250 250 M240 320 L160 210 M260 290 L340 190 M235 370 L130 300 M265 350 L370 280" 
+          stroke="url(#goldGrad)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- Canopy Foliage layers -->
+    <ellipse cx="250" cy="140" rx="200" ry="48" fill="#4B7051" />
+    <ellipse cx="250" cy="130" rx="170" ry="40" fill="#6A9A72" />
+    <ellipse cx="150" cy="195" rx="105" ry="34" fill="#3D5F43" />
+    <ellipse cx="350" cy="185" rx="110" ry="34" fill="#3D5F43" />
+    <ellipse cx="110" cy="275" rx="75" ry="24" fill="#2D4733" />
+    <ellipse cx="390" cy="265" rx="80" ry="24" fill="#2D4733" />
+    
+    <!-- Sun / Horizon Circle in Background -->
+    <circle cx="250" cy="80" r="38" fill="url(#goldGrad)" opacity="0.95" />
+  </g>
+  
+  <!-- ACNRPLO Text Monogram at bottom -->
+  <text x="256" y="440" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="52" fill="#FFFFFF" letter-spacing="8">ACNRPLO</text>
+</svg>

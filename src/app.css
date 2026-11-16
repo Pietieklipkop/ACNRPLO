@@ -1,0 +1,249 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+:root, [data-theme="light"] {
+	/* Semantic Colors - Light Mode (Bushveld Glare Resistant) */
+	--color-primary: #2D4A2B;
+	--color-primary-content: #FFFFFF;
+	--color-secondary: #8C5935;
+	--color-secondary-content: #FFFFFF;
+	--color-success: #166534;
+	--color-success-content: #FFFFFF;
+	--color-warning: #B45309;
+	--color-warning-content: #FFFFFF;
+	--color-error: #B91C1C;
+	--color-error-content: #FFFFFF;
+	--color-info: #0369A1;
+	--color-info-content: #FFFFFF;
+
+	--color-bg-base: #F7F8F5;
+	--color-bg-surface: #FFFFFF;
+	--color-border: #DCE2DA;
+	--color-text-primary: #151B17;
+	--color-text-secondary: #4D594F;
+
+	/* DaisyUI 5 Base & Control Variables for Light Theme */
+	--color-base-100: #FFFFFF;
+	--color-base-200: #F3F4F1;
+	--color-base-300: #DCE2DA;
+	--color-base-content: #151B17;
+	--color-neutral: #E7EBE5;
+	--color-neutral-content: #151B17;
+
+	/* Elevation Level Shadows */
+	--elevation-0: none;
+	--elevation-1: 0 1px 3px 0 rgba(21, 27, 23, 0.08), 0 1px 2px -1px rgba(21, 27, 23, 0.06);
+	--elevation-2: 0 4px 6px -1px rgba(21, 27, 23, 0.12), 0 2px 4px -2px rgba(21, 27, 23, 0.08);
+	--elevation-3: 0 20px 25px -5px rgba(21, 27, 23, 0.20), 0 8px 10px -6px rgba(21, 27, 23, 0.12);
+}
+
+[data-theme="dark"] {
+	/* Semantic Colors - Dark Mode (Bushveld Midnight) */
+	--color-primary: #4E7A4A;
+	--color-primary-content: #FFFFFF;
+	--color-secondary: #D49563;
+	--color-secondary-content: #1F1005;
+	--color-success: #22C55E;
+	--color-success-content: #052E16;
+	--color-warning: #FBBF24;
+	--color-warning-content: #451A03;
+	--color-error: #F87171;
+	--color-error-content: #450A0A;
+	--color-info: #38BDF8;
+	--color-info-content: #082F49;
+
+	--color-bg-base: #0F1411;
+	--color-bg-surface: #1A221C;
+	--color-border: #2D3930;
+	--color-text-primary: #F4F6F2;
+	--color-text-secondary: #9AA69C;
+
+	/* DaisyUI 5 Base & Control Variables for Dark Theme */
+	--color-base-100: #1A221C;
+	--color-base-200: #131915;
+	--color-base-300: #2D3930;
+	--color-base-content: #F4F6F2;
+	--color-neutral: #232D26;
+	--color-neutral-content: #F4F6F2;
+
+	--elevation-0: none;
+	--elevation-1: 0 1px 3px 0 rgba(0, 0, 0, 0.40), 0 1px 2px -1px rgba(0, 0, 0, 0.30);
+	--elevation-2: 0 4px 6px -1px rgba(0, 0, 0, 0.50), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
+	--elevation-3: 0 20px 25px -5px rgba(0, 0, 0, 0.75), 0 8px 10px -6px rgba(0, 0, 0, 0.50);
+}
+
+html {
+	box-sizing: border-box;
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+	overflow-x: hidden;
+	width: 100%;
+	max-width: 100vw;
+}
+
+*, *::before, *::after {
+	box-sizing: inherit;
+}
+
+body {
+	background-color: var(--color-bg-base);
+	color: var(--color-text-primary);
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+	min-height: 100vh;
+	min-height: 100dvh;
+	width: 100%;
+	max-width: 100vw;
+	overflow-x: hidden;
+	position: relative;
+	-webkit-tap-highlight-color: transparent;
+	touch-action: manipulation;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* Prevent tables, images, and preformatted text from causing horizontal page blowouts */
+table, img, svg, canvas, pre {
+	max-width: 100%;
+}
+
+/* Mobile responsive scroll wrappers */
+.overflow-x-auto {
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior-x: contain;
+}
+
+/* Touch target sizing & interaction stabilization */
+button, a, input, select, textarea {
+	touch-action: manipulation;
+}
+
+.tabular-nums {
+	font-variant-numeric: tabular-nums;
+	font-feature-settings: 'tnum' 1;
+}
+
+/* =========================================================================
+   Universal Form Controls Legibility (Light and Dark Themes)
+   Guarantees that searches, inputs, dropdowns, selects, and options are 100% readable
+   ========================================================================= */
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="range"]):not([type="color"]),
+select,
+textarea,
+.input,
+.select,
+.textarea {
+	color: var(--color-text-primary) !important;
+	background-color: var(--color-bg-surface) !important;
+	border-color: var(--color-border);
+}
+
+/* Internal inputs inside .input or .select wrappers */
+.input input,
+.select select {
+	color: var(--color-text-primary) !important;
+	background-color: transparent !important;
+}
+
+/* Explicit placeholder contrast */
+input::placeholder,
+textarea::placeholder,
+.input input::placeholder,
+.textarea::placeholder {
+	color: var(--color-text-secondary) !important;
+	opacity: 0.75 !important;
+}
+
+/* Dropdown <option> text and background */
+select option {
+	background-color: var(--color-bg-surface) !important;
+	color: var(--color-text-primary) !important;
+}
+
+/* Native color-scheme for dropdown popup arrows & scrollbars */
+select.select,
+select {
+	color-scheme: light;
+}
+[data-theme="dark"] select.select,
+[data-theme="dark"] select {
+	color-scheme: dark;
+}
+
+/* Focus state border and ring */
+input:focus,
+select:focus,
+textarea:focus,
+.input:focus,
+.select:focus,
+.textarea:focus,
+.input:focus-within,
+.select:focus-within {
+	border-color: var(--color-primary) !important;
+	outline: 2px solid var(--color-primary) !important;
+	outline-offset: 1px !important;
+}
+
+/* =========================================================================
+   Button Text Contrast Protection for Light and Dark Themes
+   ========================================================================= */
+
+/* 1. Solid colored buttons MUST always have white text in all states */
+.btn-primary,
+.btn-secondary,
+.btn-accent,
+.btn-success,
+.btn-warning,
+.btn-error,
+.btn-info,
+.btn:is(
+	[class*="bg-[var(--color-primary)]"],
+	[class*="bg-purple-"],
+	[class*="bg-emerald-"],
+	[class*="bg-rose-"],
+	[class*="bg-amber-"],
+	[class*="bg-[var(--color-secondary)]"],
+	[class*="bg-blue-"]
+),
+.btn.text-white,
+.btn[class*="text-white"],
+button.text-white,
+a.text-white {
+	--btn-fg: #ffffff;
+	color: #ffffff !important;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-accent:hover,
+.btn-success:hover,
+.btn-warning:hover,
+.btn-error:hover,
+.btn-info:hover,
+.btn:is(
+	[class*="bg-[var(--color-primary)]"],
+	[class*="bg-purple-"],
+	[class*="bg-emerald-"],
+	[class*="bg-rose-"],
+	[class*="bg-amber-"],
+	[class*="bg-[var(--color-secondary)]"],
+	[class*="bg-blue-"]
+):hover,
+.btn.text-white:hover,
+.btn[class*="text-white"]:hover,
+button.text-white:hover,
+a.text-white:hover {
+	color: #ffffff !important;
+}
+
+/* 2. Ghost, outline, neutral, and light buttons MUST have dark/readable text */
+.btn-ghost,
+.btn-outline:not([class*="text-"]):not([class*="btn-primary"]):not([class*="btn-secondary"]):not([class*="btn-error"]):not([class*="btn-success"]),
+.btn:is([class*="bg-[var(--color-bg-base)]"], [class*="bg-stone-"], [class*="bg-white"], [class*="border-"]):not([class*="text-white"]) {
+	--btn-fg: var(--color-text-primary);
+	color: var(--color-text-primary);
+}
+
+.btn-ghost:hover,
+.btn-outline:not([class*="text-"]):not([class*="btn-primary"]):not([class*="btn-secondary"]):not([class*="btn-error"]):not([class*="btn-success"]):hover,
+.btn:is([class*="bg-[var(--color-bg-base)]"], [class*="bg-stone-"], [class*="bg-white"], [class*="border-"]):not([class*="text-white"]):hover {
+	color: var(--color-text-primary);
+}

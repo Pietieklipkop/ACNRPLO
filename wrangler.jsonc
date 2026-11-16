@@ -1,0 +1,39 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "acnrploapp",
+	"compatibility_date": "2026-05-18",
+	"compatibility_flags": ["nodejs_compat", "nodejs_als"],
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "acnrploapp",
+			"database_id": "24ca8761-b3a8-4926-b018-b724738b4458",
+			"migrations_dir": "./drizzle"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "BUCKET",
+			"bucket_name": "acnrploapp"
+		}
+	],
+	"ai": {
+		"binding": "AI"
+	},
+	"send_email": [
+		{
+			"name": "EMAIL"
+		}
+	],
+	"vars": {
+		"SENDER_EMAIL": "invitations@dialogdev.net"
+	},
+	"observability": {
+		"enabled": false
+	}
+}
