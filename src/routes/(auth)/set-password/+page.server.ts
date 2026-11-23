@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getDb, schema } from '$lib/server/db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, gte } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
 import { logAuditEvent } from '$lib/server/audit';
 import { PLO_MEMBER_PALETTE } from '$lib/constants/member-colors';
@@ -127,134 +127,177 @@ export const actions: Actions = {
 		const hashedPassword = await hashPassword(password);
 		const normalizedEmail = invite.email.toLowerCase();
 
-		// Check if user account already exists in user table
+		// Check if user account already exists in user table BEFORE claiming invite
 		const existingUser = await db.query.user.findFirst({
 			where: eq(schema.user.email, normalizedEmail)
 		});
 
-		let userId = existingUser?.id;
+		if (existingUser) {
+			if (existingUser.status === 'disabled' || existingUser.status === 'archived') {
+				return fail(403, { error: 'This account is inactive and cannot be reactivated via invitation.' });
+			}
 
-		if (!existingUser) {
-			userId = crypto.randomUUID();
-			const allUsers = await db.query.user.findMany();
-			const usedColors = new Set(allUsers.map((u) => u.color).filter(Boolean));
-			const autoColor =
-				PLO_MEMBER_PALETTE.find((c) => !usedColors.has(c)) ||
-				PLO_MEMBER_PALETTE[allUsers.length % PLO_MEMBER_PALETTE.length];
-
-			const cleanName = name || invite.name || normalizedEmail.split('@')[0];
-			const baseUsername = normalizedEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
-
-			const usernameConflict = await db.query.user.findFirst({
-				where: eq(schema.user.username, baseUsername)
-			});
-			const finalUsername = usernameConflict ? `${baseUsername}_${userId.slice(0, 4)}` : baseUsername;
-
-			await db.insert(schema.user).values({
-				id: userId,
-				name: cleanName,
-				email: normalizedEmail,
-				username: finalUsername,
-				roles: JSON.stringify(['associate']),
-				status: 'active',
-				emailVerified: true,
-				color: autoColor,
-				createdAt: now,
-				updatedAt: now
-			});
-
-			await db.insert(schema.account).values({
-				id: crypto.randomUUID(),
-				accountId: userId,
-				providerId: 'credential',
-				userId,
-				password: hashedPassword,
-				createdAt: now,
-				updatedAt: now
-			});
-		} else {
-			// User exists - update their password and ensure associate role
-			userId = existingUser.id;
-			let userRoles: string[] = [];
+			let existingRoles: string[] = [];
 			try {
-				userRoles = JSON.parse(existingUser.roles || '[]');
+				existingRoles = JSON.parse(existingUser.roles || '[]');
 			} catch {
-				userRoles = [];
+				existingRoles = [];
 			}
 
-			if (!userRoles.includes('associate') && !userRoles.includes('main_plo') && !userRoles.includes('secretary')) {
-				userRoles.push('associate');
+			if (
+				existingRoles.includes('secretary') ||
+				existingRoles.includes('main_plo') ||
+				existingRoles.includes('executive')
+			) {
+				return fail(403, { error: 'Existing Main PLO, Executive, or Secretary accounts cannot be claimed via associate invitation.' });
 			}
 
-			await db
-				.update(schema.user)
-				.set({
-					name: name || existingUser.name,
-					roles: JSON.stringify(userRoles.length ? userRoles : ['associate']),
-					status: 'active',
-					emailVerified: true,
-					updatedAt: now
-				})
-				.where(eq(schema.user.id, userId));
-
-			const existingAccount = await db.query.account.findFirst({
-				where: and(eq(schema.account.userId, userId), eq(schema.account.providerId, 'credential'))
+			const existingCredentialAccount = await db.query.account.findFirst({
+				where: and(eq(schema.account.userId, existingUser.id), eq(schema.account.providerId, 'credential'))
 			});
-
-			if (existingAccount) {
-				await db
-					.update(schema.account)
-					.set({
-						password: hashedPassword,
-						updatedAt: now
-					})
-					.where(eq(schema.account.id, existingAccount.id));
-			} else {
-				await db.insert(schema.account).values({
-					id: crypto.randomUUID(),
-					accountId: userId,
-					providerId: 'credential',
-					userId,
-					password: hashedPassword,
-					createdAt: now,
-					updatedAt: now
-				});
+			if (existingCredentialAccount) {
+				return fail(409, { error: 'An account with this email already has a password set. Please sign in instead.' });
 			}
 		}
 
-		// Ensure associate record is created linking this user to the sponsoring Main PLO member
-		const existingAssociate = await db.query.associates.findFirst({
-			where: and(
-				eq(schema.associates.associateUserId, userId),
-				eq(schema.associates.sponsoringMainPloUserId, invite.sponsoringMainPloUserId)
-			)
-		});
-
-		if (!existingAssociate) {
-			await db.insert(schema.associates).values({
-				id: crypto.randomUUID(),
-				associateUserId: userId,
-				sponsoringMainPloUserId: invite.sponsoringMainPloUserId,
-				relationship: invite.relationship || 'family',
-				createdAt: now
-			});
-		} else {
-			await db
-				.update(schema.associates)
-				.set({
-					relationship: invite.relationship || 'family'
-				})
-				.where(eq(schema.associates.id, existingAssociate.id));
-		}
-
-		// Mark invitation as accepted
-		await db
+		// Atomically claim the pending invitation to prevent concurrent redemption races
+		const claimedInvites = await db
 			.update(schema.invitations)
 			.set({
 				status: 'accepted',
 				acceptedAt: now
 			})
-			.where(eq(schema.invitations.id, invite.id));
+			.where(
+				and(
+					eq(schema.invitations.id, invite.id),
+					eq(schema.invitations.status, 'pending'),
+					gte(schema.invitations.expiresAt, now)
+				)
+			)
+			.returning();
+
+		if (claimedInvites.length === 0) {
+			return fail(400, { error: 'This invitation is no longer pending or has expired.' });
+		}
+
+		let userId = existingUser?.id;
+
+		try {
+			if (!existingUser) {
+				userId = crypto.randomUUID();
+				const allUsers = await db.query.user.findMany();
+				const usedColors = new Set(allUsers.map((u) => u.color).filter(Boolean));
+				const autoColor =
+					PLO_MEMBER_PALETTE.find((c) => !usedColors.has(c)) ||
+					PLO_MEMBER_PALETTE[allUsers.length % PLO_MEMBER_PALETTE.length];
+
+				const cleanName = name || invite.name || normalizedEmail.split('@')[0];
+				const baseUsername = normalizedEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+
+				const usernameConflict = await db.query.user.findFirst({
+					where: eq(schema.user.username, baseUsername)
+				});
+				const finalUsername = usernameConflict ? `${baseUsername}_${userId.slice(0, 4)}` : baseUsername;
+
+				await db.batch([
+					db.insert(schema.user).values({
+						id: userId,
+						name: cleanName,
+						email: normalizedEmail,
+						username: finalUsername,
+						roles: JSON.stringify(['associate']),
+						status: 'active',
+						emailVerified: true,
+						color: autoColor,
+						createdAt: now,
+						updatedAt: now
+					}),
+					db.insert(schema.account).values({
+						id: crypto.randomUUID(),
+						accountId: userId,
+						providerId: 'credential',
+						userId,
+						password: hashedPassword,
+						createdAt: now,
+						updatedAt: now
+					}),
+					db.insert(schema.associates).values({
+						id: crypto.randomUUID(),
+						associateUserId: userId,
+						sponsoringMainPloUserId: invite.sponsoringMainPloUserId,
+						relationship: invite.relationship || 'family',
+						createdAt: now
+					})
+				]);
+			} else {
+				userId = existingUser.id;
+				let userRoles: string[] = [];
+				try {
+					userRoles = JSON.parse(existingUser.roles || '[]');
+				} catch {
+					userRoles = [];
+				}
+
+				if (!userRoles.includes('associate')) {
+					userRoles.push('associate');
+				}
+
+				const existingAssociate = await db.query.associates.findFirst({
+					where: and(
+						eq(schema.associates.associateUserId, userId),
+						eq(schema.associates.sponsoringMainPloUserId, invite.sponsoringMainPloUserId)
+					)
+				});
+
+				const associateOp = existingAssociate
+					? db
+							.update(schema.associates)
+							.set({
+								relationship: invite.relationship || 'family'
+							})
+							.where(eq(schema.associates.id, existingAssociate.id))
+					: db.insert(schema.associates).values({
+							id: crypto.randomUUID(),
+							associateUserId: userId,
+							sponsoringMainPloUserId: invite.sponsoringMainPloUserId,
+							relationship: invite.relationship || 'family',
+							createdAt: now
+						});
+
+				await db.batch([
+					db
+						.update(schema.user)
+						.set({
+							name: name || existingUser.name,
+							roles: JSON.stringify(userRoles.length ? userRoles : ['associate']),
+							status: 'active',
+							emailVerified: true,
+							updatedAt: now
+						})
+						.where(eq(schema.user.id, userId)),
+					db.insert(schema.account).values({
+						id: crypto.randomUUID(),
+						accountId: userId,
+						providerId: 'credential',
+						userId,
+						password: hashedPassword,
+						createdAt: now,
+						updatedAt: now
+					}),
+					associateOp
+				]);
+			}
+		} catch (err) {
+			// Revert invitation claim if user/account/associate creation failed
+			await db
+				.update(schema.invitations)
+				.set({
+					status: 'pending',
+					acceptedAt: null
+				})
+				.where(and(eq(schema.invitations.id, invite.id), eq(schema.invitations.acceptedAt, now)));
+			throw err;
+		}
 
 		// Audit log
 		await logAuditEvent(platform.env.DB, {

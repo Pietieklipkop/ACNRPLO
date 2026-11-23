@@ -4,6 +4,7 @@ import { getDb, schema } from '$lib/server/db';
 import { eq, and, desc } from 'drizzle-orm';
 import { logAuditEvent } from '$lib/server/audit';
 import { canVote, hasAnyRole } from '$lib/auth/roles';
+import { hashPassword } from 'better-auth/crypto';
 
 export const load: PageServerLoad = async ({ locals, platform, url }) => {
 	if (!locals.user) {
@@ -387,24 +388,40 @@ export const actions: Actions = {
 		const existing = await db.query.user.findFirst({ where: eq(schema.user.email, email) });
 		if (existing) return fail(400, { error: 'A member with this email already exists.' });
 
-		const signUpRes = await locals.auth.api.signUpEmail({
-			body: { name, email, password, username, phone }
-		});
-
-		if (!signUpRes?.user) return fail(500, { error: 'Failed to create associate member account.' });
-
-		await db
-			.update(schema.user)
-			.set({ roles: JSON.stringify(['associate']), status: 'active' })
-			.where(eq(schema.user.id, signUpRes.user.id));
-
+		const userId = crypto.randomUUID();
 		const associateId = crypto.randomUUID();
-		await db.insert(schema.associates).values({
-			id: associateId,
-			associateUserId: signUpRes.user.id,
-			sponsoringMainPloUserId: sponsorId,
-			relationship
-		});
+		const now = new Date();
+		const hashedPassword = await hashPassword(password);
+
+		await db.batch([
+			db.insert(schema.user).values({
+				id: userId,
+				name,
+				email,
+				username: username || null,
+				phone,
+				roles: JSON.stringify(['associate']),
+				status: 'active',
+				emailVerified: false,
+				createdAt: now,
+				updatedAt: now
+			}),
+			db.insert(schema.account).values({
+				id: crypto.randomUUID(),
+				accountId: userId,
+				providerId: 'credential',
+				userId,
+				password: hashedPassword,
+				createdAt: now,
+				updatedAt: now
+			}),
+			db.insert(schema.associates).values({
+				id: associateId,
+				associateUserId: userId,
+				sponsoringMainPloUserId: sponsorId,
+				relationship
+			})
+		]);
 
 		await logAuditEvent(platform.env.DB, {
 			userId: locals.user.id,

@@ -43,6 +43,13 @@
       "when": 1791424056135,
       "tag": "0005_lumpy_cammi",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794859470194,
+      "tag": "0006_sync_schema_drift",
+      "breakpoints": true
     }
   ]
 }

@@ -186,21 +186,38 @@ textarea:focus,
    Button Text Contrast Protection for Light and Dark Themes
    ========================================================================= */
 
-/* 1. Solid colored buttons MUST always have white text in all states */
-.btn-primary,
-.btn-secondary,
-.btn-accent,
-.btn-success,
-.btn-warning,
-.btn-error,
-.btn-info,
+/* 1. Semantic buttons use their theme-calibrated content tokens for WCAG AA contrast */
+.btn-primary:not(.btn-outline):not(.btn-ghost) {
+	--btn-fg: var(--color-primary-content);
+	color: var(--color-primary-content);
+}
+.btn-secondary:not(.btn-outline):not(.btn-ghost) {
+	--btn-fg: var(--color-secondary-content);
+	color: var(--color-secondary-content);
+}
+.btn-success:not(.btn-outline):not(.btn-ghost) {
+	--btn-fg: var(--color-success-content);
+	color: var(--color-success-content);
+}
+.btn-warning:not(.btn-outline):not(.btn-ghost) {
+	--btn-fg: var(--color-warning-content);
+	color: var(--color-warning-content);
+}
+.btn-error:not(.btn-outline):not(.btn-ghost) {
+	--btn-fg: var(--color-error-content);
+	color: var(--color-error-content);
+}
+.btn-info:not(.btn-outline):not(.btn-ghost) {
+	--btn-fg: var(--color-info-content);
+	color: var(--color-info-content);
+}
+
 .btn:is(
 	[class*="bg-[var(--color-primary)]"],
 	[class*="bg-purple-"],
 	[class*="bg-emerald-"],
 	[class*="bg-rose-"],
 	[class*="bg-amber-"],
-	[class*="bg-[var(--color-secondary)]"],
 	[class*="bg-blue-"]
 ),
 .btn.text-white,
@@ -208,30 +225,7 @@ textarea:focus,
 button.text-white,
 a.text-white {
 	--btn-fg: #ffffff;
-	color: #ffffff !important;
-}
-
-.btn-primary:hover,
-.btn-secondary:hover,
-.btn-accent:hover,
-.btn-success:hover,
-.btn-warning:hover,
-.btn-error:hover,
-.btn-info:hover,
-.btn:is(
-	[class*="bg-[var(--color-primary)]"],
-	[class*="bg-purple-"],
-	[class*="bg-emerald-"],
-	[class*="bg-rose-"],
-	[class*="bg-amber-"],
-	[class*="bg-[var(--color-secondary)]"],
-	[class*="bg-blue-"]
-):hover,
-.btn.text-white:hover,
-.btn[class*="text-white"]:hover,
-button.text-white:hover,
-a.text-white:hover {
-	color: #ffffff !important;
+	color: #ffffff;
 }
 
 /* 2. Ghost, outline, neutral, and light buttons MUST have dark/readable text */

@@ -141,16 +141,42 @@ export const actions: Actions = {
 			return fail(400, { error: 'Invalid document category selected.' });
 		}
 
+		const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+		const ALLOWED_EXTENSIONS = new Set(['pdf', 'png', 'jpg', 'jpeg', 'webp', 'txt', 'csv', 'docx', 'xlsx']);
+		const ALLOWED_MIME_TYPES = new Set([
+			'application/pdf',
+			'image/png',
+			'image/jpeg',
+			'image/webp',
+			'text/plain',
+			'text/csv',
+			'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+		]);
+
 		let fileName = 'Uploaded_Document.pdf';
 		let fileSize = 1500000;
 		let contentType = 'application/pdf';
 		const docId = crypto.randomUUID();
-		const r2Key = `docs/${docId}_${file?.name ? file.name.replace(/[^a-zA-Z0-9._-]/g, '_') : 'document.pdf'}`;
+		const sanitizedBaseName = file?.name ? file.name.replace(/[^a-zA-Z0-9._-]/g, '_') : 'document.pdf';
+		const r2Key = `docs/${docId}_${sanitizedBaseName}`;
 
 		if (file && file.size > 0) {
-			fileName = file.name;
+			if (file.size > MAX_FILE_SIZE) {
+				return fail(400, { error: 'File exceeds the 20 MB maximum upload limit.' });
+			}
+
+			const ext = file.name.split('.').pop()?.toLowerCase() || '';
+			const resolvedType = file.type || 'application/octet-stream';
+			if (!ALLOWED_EXTENSIONS.has(ext) || !ALLOWED_MIME_TYPES.has(resolvedType)) {
+				return fail(400, {
+					error: 'Unsupported file type. Allowed formats: PDF, PNG, JPG, WEBP, TXT, CSV, DOCX, XLSX.'
+				});
+			}
+
+			fileName = sanitizedBaseName;
 			fileSize = file.size;
-			contentType = file.type || 'application/pdf';
+			contentType = resolvedType;
 
 			// Store in Cloudflare R2 if binding is active
 			if (platform.env.BUCKET) {
@@ -161,6 +187,7 @@ export const actions: Actions = {
 					});
 				} catch (err) {
 					console.error('Failed to store document in R2:', err);
+					return fail(500, { error: 'Failed to store document in object storage. Please try again.' });
 				}
 			}
 		}

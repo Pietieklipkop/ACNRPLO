@@ -25,6 +25,7 @@ declare global {
 				EMAIL?: SendEmail;
 				SEND_EMAIL?: SendEmail;
 				SENDER_EMAIL?: string;
+				BETTER_AUTH_SECRET?: string;
 			};
 			ctx: ExecutionContext;
 			caches: CacheStorage;
